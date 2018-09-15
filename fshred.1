@@ -1,0 +1,76 @@
+.TH fshred 1
+.SH NAME
+\fBfshred\fR \(en a snappy \fBshred\fR clone
+.SH SYNOPSIS
+\fBfshred\fR [\fIOPTIONS\fR] [\fIROUNDS\fR] \fIPATH\fR
+.SH DESCRIPTION
+.PP
+Coincidentally, Fshred was written because its author was oblivious to the
+existence of \fBshred\fR.
+Even so, Fshred came out to be relatively similar to \fBshred\fR, except with
+some unique methods of processing the \fB\-i\fR option.
+For example: if the \fB\-i\fR option's argument is an existing path, the
+command is analgous to \fBshred\fR.
+In the case that the path does NOT exist, the path itself is used as the input
+data.
+Finally, if the path is the empty string, files are overwritten with the null
+byte.
+.TP
+\fB\-c\fR, \fB\-\-nocolor\fR
+don't colorize output
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+display this text and exit
+.TP
+\fB\-i\fR, \fB\-\-infile\fR=\fI\,PATH\fR
+donpath to new bytes
+.TP
+\fB\-l\fR, \fB\-\-followlinks\fR
+follow all symbolic links
+.TP
+\fB\-s\fR, \fB\-\-showspecial\fR
+include all special devices
+.PP
+The ROUNDS argument specifies the number of times to overwrite each path
+beneath PATH.
+If omitted, ROUNDS defaults to 1.
+.PP
+The PATH argument specifies where to shred.
+If this is a directory, all files beneath PATH are shredded.
+The PATH argument must be made explicit in order to prevent accidental
+shredding of the CWD.
+.SH EXIT STATUS
+.TP
+0
+OK
+.TP
+1
+ERROR
+.SH EXAMPLES
+.TP
+\fBfshred .\fR
+Shred all files beneath the CWD using content from "/dev/urandom".
+If "/dev/urandom" doesn't exist, repeatedly overwrite all files beneath the CWD
+with the string "/dev/urandom".
+.TP
+\fBfshred -i '' .\fR
+Overwrite all files beneath the CWD with the null byte.
+.SH AUTHOR
+Written by Bailey Defino.
+.SH COPYRIGHT
+Copyright (C) 2018 Bailey Defino
+.PP
+<https://bdefino.github.io>
+.PP
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+.PP
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+.PP
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
