@@ -1,0 +1,11 @@
+bin=/usr/local/bin
+cc=gcc
+man1=/usr/share/man/man1
+title=fshred
+
+b, build:
+  (cc) *.c crypto/*.c -o (title)
+
+i, install:
+  (cc) *.c crypto/*.c -o (bin)/(title)
+  cp (title).1 (man1)/
