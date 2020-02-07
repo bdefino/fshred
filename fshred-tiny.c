@@ -38,7 +38,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define OPTIONS ("OPTIONS\n" \
   "\t-b INT\n" \
   "\t\tset the buffer length manually\n" \
-  "\t\t(defaults to 4MiB\n" \
+  "\t\t(defaults to 4MiB)\n" \
   "\t-c INT\n" \
   "\t\tset the overwrite count to INT\n" \
   "\t-f INT\n" \
