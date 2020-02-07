@@ -8,7 +8,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-/* an attempt at a teensy/robust recursive shredder */
+/* a tiny/robust recursive shredder */
 
 #undef BUFLEN
 #undef IPATH
@@ -42,7 +42,7 @@
   "\t-u\n" \
   "\t\tunlink entries under PATH\n")
 #define OPTSTRING "b:c:f:hi:lmo:s:u+"
-#define USAGE ("recursive shredder\n" \
+#define USAGE ("a tiny/robust recursive shredder\n" \
   "Usage: %s [OPTIONS] PATH...\n")
 
 struct {
@@ -305,7 +305,7 @@ int main(int argc, char **argv) {
   }
 
   if (optind >= argc) {
-    help(argv[0]);
+    usage(argv[0]);
     retval = 1;
     goto bubble;
   }
