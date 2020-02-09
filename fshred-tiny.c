@@ -155,7 +155,8 @@ int fshred(const int ofd, int ifd, const size_t buflen, off_t lim) {
 bubble:
 
   if (ofd >= 0) {
-    if (fdatasync(ofd)) {
+    if (fdatasync(ofd)
+        && !retval) {
       retval = -errno;
     }
   }
