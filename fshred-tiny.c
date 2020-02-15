@@ -273,6 +273,8 @@ int main(int argc, char **argv) {
   struct stat ost;
   struct FTW _walk;
 
+  retval = EXIT_SUCCESS;
+
   while (1) {
     opt = getopt(argc, argv, OPTSTRING);
 
@@ -296,7 +298,7 @@ int main(int argc, char **argv) {
         break;
       case 'h':
         help(argv[0]);
-        return 0;
+        goto bubble;
       case 'i':
         MAIN.ioffset = atoi(optarg); /* allow negative values */
         break;
@@ -328,14 +330,14 @@ int main(int argc, char **argv) {
         fprintf(stderr, "`%s` isn't an option.\n", optarg);
       default:
         help(argv[0]);
-        retval = 1;
+        retval = EXIT_FAILURE;
         goto bubble;
     }
   }
 
   if (optind >= argc) {
     usage(argv[0]);
-    retval = 1;
+    retval = EXIT_FAILURE;
     goto bubble;
   }
 
