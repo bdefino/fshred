@@ -300,7 +300,7 @@ int main(int argc, char **argv) {
         help(argv[0]);
         goto bubble;
       case 'i':
-        MAIN.ioffset = atoi(optarg); /* allow negative values */
+        MAIN.ioffset = atoi(optarg);
         break;
       case 'l':
         MAIN.flags &= ~FTW_PHYS;
@@ -309,7 +309,7 @@ int main(int argc, char **argv) {
         MAIN.flags &= ~FTW_MOUNT;
         break;
       case 'o':
-        MAIN.ooffset = atoi(optarg); /* allow negative values */
+        MAIN.ooffset = atoi(optarg);
         break;
       case 'r':
         MAIN.rounds = atoi(optarg);
