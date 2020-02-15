@@ -53,16 +53,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
   "\t-m\n" \
   "\t\tallow spanning of multiple file systems\n" \
   "\t-o INT\n" \
-  "\t\tseek to INT (each PATH, each round) before writing the output\n" \
+  "\t\tseek to INT (each TARGET, each round) before writing the output\n" \
   "\t-r INT\n" \
   "\t\toverwrite PATH INT times\n" \
   "\t-s PATH\n" \
   "\t\tdraw input entropy from PATH\n" \
   "\t-u\n" \
-  "\t\tunlink entries under PATH\n")
+  "\t\tunlink entries under TARGET\n")
 #define OPTSTRING "b:c:f:hi:lmo:r:s:u+"
 #define USAGE ("a tiny/robust recursive shredder\n" \
-  "Usage: %s [OPTIONS] PATH...\n")
+  "Usage: %s [OPTIONS] TARGET...\n")
 
 struct {
   size_t buflen;
