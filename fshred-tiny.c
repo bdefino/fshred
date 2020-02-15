@@ -373,7 +373,7 @@ bubble:
   if (retval < 0) {
     _errno = errno;
     errno = -retval;
-    perror(MAIN.ifd >= 0 ? MAIN.opath : MAIN.ipath);
+    perror(NULL);
     errno = _errno;
   }
 
