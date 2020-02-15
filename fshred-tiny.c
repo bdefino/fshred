@@ -126,7 +126,6 @@ int fshred(const int ofd, const size_t buflen, const int ifd, off_t lim) {
   while (lim) {
     /* (partially) fill the buffer */
 
-    bufp = buf;
     cbuflen = read(ifd, buf, (buflen < lim ? buflen : lim));
 
     if (cbuflen < 0) {
@@ -142,7 +141,7 @@ int fshred(const int ofd, const size_t buflen, const int ifd, off_t lim) {
     
     /* flush the buffer */
 
-    while (cbuflen) {
+    for (bufp = buf; cbuflen; ) {
       wbuflen = write(ofd, bufp, cbuflen);
 
       if (wbuflen < 0) {
