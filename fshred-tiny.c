@@ -213,10 +213,20 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
     }
   } else if (info == FTW_F
       || info == FTW_SL) {
-    ofd = open(opath, O_CREAT | O_RDONLY | O_WRONLY);
+    /* attempt to exclusively create the file */
+
+    ofd = open(opath, O_CREAT | O_EXCL | O_TRUNC | O_WRONLY);
 
     if (ofd < 0) {
-      goto bubble;
+      if (errno == EEXIST) {
+        /* the file exists, so attempt to open it as usual */
+
+        ofd = open(opath, O_RDONLY | O_WRONLY);
+      }
+
+      if (ofd < 0) {
+        goto bubble;
+      }
     }
     
     for (round = 0; !retval && round < MAIN.rounds; round++) {
@@ -263,6 +273,7 @@ static void help(const char *executable) {
 
 int main(int argc, char **argv) {
   int _errno;
+  int oisdir;
   int opt;
   int retval;
   struct stat ost;
@@ -352,11 +363,19 @@ int main(int argc, char **argv) {
     MAIN.opath = argv[optind];
 
     if (stat(MAIN.opath, &ost)) {
-      retval = -errno;
-      goto bubble;
+      if (errno != ENOENT) {
+        retval = -errno;
+        goto bubble;
+      }
+
+      /* signal for a file to be created */
+
+      oisdir = 0;
+    } else {
+      oisdir = S_ISDIR(ost.st_mode);
     }
     
-    if (S_ISDIR(ost.st_mode)) {
+    if (oisdir) {
       retval = nftw(MAIN.opath, &fshred__nftw_callback, MAIN.fd_limit,
         MAIN.flags);
     } else {
