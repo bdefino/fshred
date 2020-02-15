@@ -106,8 +106,6 @@ int fshred(const int ofd, const size_t buflen, const int ifd, off_t lim) {
   int retval;
   ssize_t wbuflen; /* written buffer length */
 
-  /* prep bubbling */
-
   retval = 0;
 
   if (!buflen) {
@@ -176,8 +174,6 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
   off_t opos;
   int retval;
   unsigned int round;
-
-  /* prep bubbling */
 
   ofd = -1;
   retval = 0;
