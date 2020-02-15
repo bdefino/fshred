@@ -99,7 +99,7 @@ static void *(* volatile memshred)(void *, int, size_t) = \
   (void *(* volatile)(void *, int, size_t)) &memset;
 
 /* shred a file using the contents of another */
-int fshred(const int ofd, int ifd, const size_t buflen, off_t lim) {
+int fshred(const int ofd, const size_t buflen, const int ifd, off_t lim) {
   char buf[buflen];
   char *bufp;
   ssize_t cbuflen; /* current buffer length */
@@ -233,7 +233,7 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
       }
       printf("Shredding \"%s\" (round %u/%u)...\n", opath, round + 1,
         MAIN.rounds);
-      retval = fshred(ofd, MAIN.ifd, MAIN.buflen,
+      retval = fshred(ofd, MAIN.buflen, MAIN.ifd,
         (MAIN.has_ocount ? MAIN.ocount : st->st_size) - opos);
     }
   }
