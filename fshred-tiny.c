@@ -47,24 +47,26 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
   "\t-h\n" \
   "\t\tprint this text and exit\n" \
   "\t-i INT\n" \
-  "\t\tseek to INT before reading the input\n" \
+  "\t\tseek to INT (ONCE!) before reading the input\n" \
   "\t-l\n" \
   "\t\tfollow symbolic links\n" \
   "\t-m\n" \
   "\t\tallow spanning of multiple file systems\n" \
   "\t-o INT\n" \
-  "\t\tseek to INT before writing the output\n" \
+  "\t\tseek to INT (each PATH, each round) before writing the output\n" \
+  "\t-r INT\n" \
+  "\t\toverwrite PATH INT times\n" \
   "\t-s PATH\n" \
   "\t\tdraw input entropy from PATH\n" \
   "\t-u\n" \
   "\t\tunlink entries under PATH\n")
-#define OPTSTRING "b:c:f:hi:lmo:s:u+"
+#define OPTSTRING "b:c:f:hi:lmo:r:s:u+"
 #define USAGE ("a tiny/robust recursive shredder\n" \
   "Usage: %s [OPTIONS] PATH...\n")
 
 struct {
   size_t buflen;
-  int fd_limit;
+  unsigned int fd_limit;
   int flags;
   int has_ocount;
   int ifd;
@@ -73,6 +75,7 @@ struct {
   off_t ocount;
   off_t ooffset;
   char *opath;
+  unsigned int rounds;
   int unlink;
 } MAIN = {
   .buflen = BUFLEN,
@@ -87,6 +90,7 @@ struct {
   .ocount = 0,
   .ooffset = 0,
   .opath = NULL, /* MUST be explicitly specified */
+  .rounds = 1,
   .unlink = 0
 };
 
@@ -171,6 +175,7 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
   int ofd;
   off_t opos;
   int retval;
+  unsigned int round;
 
   /* prep bubbling */
 
@@ -219,16 +224,18 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
       goto bubble;
     }
     
-    opos = lseek(ofd, MAIN.ooffset, SEEK_SET);
+    for (round = 0; !retval && round < MAIN.rounds; round++) {
+      opos = lseek(ofd, MAIN.ooffset, SEEK_SET);
 
-    if (opos < 0) {
-      retval = -errno;
-      goto bubble;
+      if (opos < 0) {
+        retval = -errno;
+        goto bubble;
+      }
+      printf("Shredding \"%s\" (round %u/%u)...\n", opath, round + 1,
+        MAIN.rounds);
+      retval = fshred(ofd, MAIN.ifd, MAIN.buflen,
+        (MAIN.has_ocount ? MAIN.ocount : st->st_size) - opos);
     }
-
-    printf("Shredding \"%s\"...\n", opath);
-    retval = fshred(ofd, MAIN.ifd, MAIN.buflen,
-      (MAIN.has_ocount ? MAIN.ocount : st->st_size) - opos);
   }
 
 bubble:
@@ -301,6 +308,10 @@ int main(int argc, char **argv) {
         break;
       case 'o':
         MAIN.ooffset = atoi(optarg); /* allow negative values */
+        break;
+      case 'r':
+        MAIN.rounds = atoi(optarg);
+        MAIN.rounds = MAIN.rounds >= 0 ? MAIN.rounds : 0;
         break;
       case 's':
         MAIN.ipath = optarg;
