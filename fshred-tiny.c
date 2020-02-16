@@ -176,6 +176,7 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
   unsigned int round;
 
   ofd = -1;
+  perrors = 0;
   retval = 0;
 
   if (!MAIN.buflen) {
@@ -297,6 +298,7 @@ int main(int argc, char **argv) {
   struct stat ost;
   struct FTW _walk;
 
+  perrors = NULL;
   retval = EXIT_SUCCESS;
 
   while (1) {
