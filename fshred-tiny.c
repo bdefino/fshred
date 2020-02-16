@@ -260,8 +260,9 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
 
 bubble:
 
+  _errno = errno;
+
   if (ofd >= 0) {
-    _errno = errno;
     close(ofd);
 
     if (MAIN.unlink) {
@@ -274,12 +275,13 @@ bubble:
         retval = -errno;
       }
     }
-    errno = _errno;
   }
 
-  if (perrors != NULL) {
+  if (retval < 0) {
+    errno = _errno ? _errno : -retval;
     perror(perrors);
   }
+  errno = _errno;
   return retval;
 }
 
@@ -416,16 +418,21 @@ int main(int argc, char **argv) {
 
 bubble:
 
+  _errno = errno;
 
   if (MAIN.ifd >= 0) {
-    _errno = errno;
-    close(MAIN.ifd);
-    errno = _errno;
+    if (close(MAIN.ifd)
+        && !retval) {
+      _errno = errno;
+      perrors = MAIN.ipath;
+      retval = -errno;
+    }
   }
 
-  if (perrors) {
+  if (retval < 0) {
     perror(perrors);
   }
+  errno = _errno;
   return retval;
 }
 
