@@ -171,6 +171,7 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
   int _errno;
   int ofd;
   off_t opos;
+  char *perrors;
   int retval;
   unsigned int round;
 
@@ -183,6 +184,7 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
   }
 
   if (MAIN.ifd < 0) {
+    perrors = (char *) MAIN.ipath;
     retval = -EBADF;
     goto bubble;
   }
@@ -193,6 +195,7 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
   }
 
   if (st == NULL) {
+    perrors = (char *) opath;
     retval = -EFAULT;
     goto bubble;
   }
@@ -207,6 +210,7 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
       printf("Unlinking \"%s\"...\n", opath);
       
       if (rmdir(opath)) {
+        perrors = (char *) opath;
         retval = -errno;
         goto bubble;
       }
@@ -225,14 +229,16 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
       }
 
       if (ofd < 0) {
+        perrors = (char *) opath;
         goto bubble;
       }
     }
     
-    for (round = 0; !retval && round < MAIN.rounds; round++) {
+    for (round = 0; round < MAIN.rounds; round++) {
       opos = lseek(ofd, MAIN.ooffset, SEEK_SET);
 
       if (opos < 0) {
+        perrors = (char *) opath;
         retval = -errno;
         goto bubble;
       }
@@ -240,25 +246,36 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
         MAIN.rounds);
       retval = fshred(ofd, MAIN.buflen, MAIN.ifd,
         (MAIN.has_ocount ? MAIN.ocount : st->st_size) - opos);
+
+      if (retval) {
+        perrors = (char *) opath;
+        goto bubble;
+      }
     }
   }
 
 bubble:
 
+  _errno = errno;
+
   if (ofd >= 0) {
-    _errno = errno;
     close(ofd);
-    errno = _errno;
 
     if (MAIN.unlink) {
       printf("Unlinking \"%s\"...\n", opath);
 
       if (unlink(opath)
           && !retval) {
+        perrors = (char *) opath;
         retval = -errno;
       }
     }
   }
+
+  if (retval) {
+    perror(perrors);
+  }
+  errno = _errno;
   return retval;
 }
 
@@ -275,6 +292,7 @@ int main(int argc, char **argv) {
   int _errno;
   int oisdir;
   int opt;
+  char *perrors;
   int retval;
   struct stat ost;
   struct FTW _walk;
@@ -350,11 +368,13 @@ int main(int argc, char **argv) {
   MAIN.ifd = open(MAIN.ipath, O_RDONLY);
 
   if (MAIN.ifd < 0) {
+    perrors = MAIN.ipath;
     retval = -errno;
     goto bubble;
   }
   
   if (lseek(MAIN.ifd, MAIN.ioffset, SEEK_SET) < 0) {
+    perrors = MAIN.ipath;
     retval = -errno;
     goto bubble;
   }
@@ -364,6 +384,7 @@ int main(int argc, char **argv) {
 
     if (stat(MAIN.opath, &ost)) {
       if (errno != ENOENT) {
+        perrors = MAIN.opath;
         retval = -errno;
         goto bubble;
       }
@@ -383,22 +404,23 @@ int main(int argc, char **argv) {
     }
 
     if (retval) {
-      break;
+      perrors = MAIN.opath;
+      goto bubble;
     }
   }
 
 bubble:
 
-  if (retval < 0) {
-    _errno = errno;
-    errno = -retval;
-    perror(NULL);
-    errno = _errno;
-  }
+  _errno = errno;
 
   if (MAIN.ifd >= 0) {
     close(MAIN.ifd);
   }
+
+  if (retval) {
+    perror(perrors);
+  }
+  errno = _errno;
   return retval;
 }
 
