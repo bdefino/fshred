@@ -180,6 +180,7 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
   retval = 0;
 
   if (!MAIN.buflen) {
+    perrors = "buffer length is 0";
     retval = -EINVAL;
     goto bubble;
   }
@@ -191,6 +192,7 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
   }
 
   if (opath == NULL) {
+    perrors = "no path provided";
     retval = -EFAULT;
     goto bubble;
   }
@@ -202,6 +204,7 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
   }
 
   if (walk == NULL) {
+    perrors = "no walk";
     retval = -EFAULT;
     goto bubble;
   }
@@ -220,7 +223,7 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
       || info == FTW_SL) {
     /* attempt to exclusively create the file */
 
-    ofd = open(opath, O_CREAT | O_EXCL | O_TRUNC | O_WRONLY);
+    ofd = open(opath, O_CREAT | O_EXCL | O_TRUNC | O_WRONLY, S_IRWXU);
 
     if (ofd < 0) {
       if (errno == EEXIST) {
@@ -274,7 +277,7 @@ bubble:
     errno = _errno;
   }
 
-  if (retval) {
+  if (perrors != NULL) {
     perror(perrors);
   }
   return retval;
@@ -420,7 +423,7 @@ bubble:
     errno = _errno;
   }
 
-  if (retval) {
+  if (perrors) {
     perror(perrors);
   }
   return retval;
