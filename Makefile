@@ -1,5 +1,5 @@
 CC := cc
-CFLAGS := -Wall -Werror
+CFLAGS := -std=c89 -Wall -Werror
 NAME := fshred
 INSTALL_PATH := /usr/local/bin/$(NAME)
 SOURCES := fshred-tiny.c
