@@ -169,6 +169,7 @@ bubble:
 static int fshred__nftw_callback(const char *opath, const struct stat *st,
     int info, struct FTW *walk) {
   int _errno;
+  off_t ocount;
   int ofd;
   off_t opos;
   char *perrors;
@@ -237,7 +238,28 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
         goto bubble;
       }
     }
-    
+
+    /* compute output count */
+
+    ocount = MAIN.ocount;
+
+    if (!MAIN.has_ocount) {
+      if (S_ISBLK(st->st_mode)
+          || S_ISDIR(st->st_mode)) {
+        ocount = lseek(ofd, 0, SEEK_END);
+
+        if (ocount < 0) {
+          perrors = (char *) opath;
+          retval = -errno;
+          goto bubble;
+        }
+      } else {
+        ocount = st->st_size;
+      }
+    }
+
+    /* shred */
+
     for (round = 0; round < MAIN.rounds; round++) {
       opos = lseek(ofd, MAIN.ooffset, SEEK_SET);
 
@@ -248,8 +270,7 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
       }
       printf("Shredding \"%s\" (round %u/%u)...\n", opath, round + 1,
         MAIN.rounds);
-      retval = fshred(ofd, MAIN.buflen, MAIN.ifd,
-        (MAIN.has_ocount ? MAIN.ocount : st->st_size) - opos);
+      retval = fshred(ofd, MAIN.buflen, MAIN.ifd, ocount - opos);
 
       if (retval) {
         perrors = (char *) opath;
