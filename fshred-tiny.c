@@ -244,6 +244,8 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
     ocount = MAIN.ocount;
 
     if (!MAIN.has_ocount) {
+      ocount = st->st_size;
+
       if (S_ISBLK(st->st_mode)
           || S_ISDIR(st->st_mode)) {
         ocount = lseek(ofd, 0, SEEK_END);
@@ -253,8 +255,6 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
           retval = -errno;
           goto bubble;
         }
-      } else {
-        ocount = st->st_size;
       }
     }
 
