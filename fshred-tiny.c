@@ -59,7 +59,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
   "\t-s PATH\n" \
   "\t\tdraw input entropy from PATH\n" \
   "\t-u\n" \
-  "\t\tunlink entries under TARGET\n")
+  "\t\tunlink entries under TARGET\n" \
+  "TARGET\n" \
+  "\toutput path (directories are handled recursively)\n")
 #define OPTSTRING "b:c:f:hi:lmo:r:s:u+"
 #define USAGE ("a tiny/robust recursive shredder\n" \
   "Usage: %s [OPTIONS] TARGET...\n")
