@@ -59,7 +59,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
   "\t-s PATH\n" \
   "\t\tdraw input entropy from PATH\n" \
   "\t-u\n" \
-  "\t\tunlink entries under TARGET\n" \
+  "\t\tshred names & unlink entries beneath TARGET\n" \
+  "\t\tmust be specified twice to unlink special files\n" \
   "TARGET\n" \
   "\toutput path (directories are handled recursively)\n")
 #define OPTSTRING "b:c:f:hi:lmo:r:s:u+"
@@ -78,7 +79,7 @@ struct {
   off_t ooffset;
   char *opath;
   unsigned int rounds;
-  int unlink;
+  int unlink; /* count */
 } MAIN = {
   .buflen = BUFLEN,
   .fd_limit = 1024,
@@ -288,7 +289,10 @@ bubble:
   if (ofd >= 0) {
     close(ofd);
 
-    if (MAIN.unlink) {
+    if (MAIN.unlink
+        && ((!S_ISBLK(st->st_mode)
+            && !S_ISCHR(st->st_mode))
+          || MAIN.unlink > 1)) {
       printf("Unlinking \"%s\"...\n", opath);
 
       if (unlink(opath)
@@ -373,7 +377,7 @@ int main(int argc, char **argv) {
         MAIN.ipath = optarg;
         break;
       case 'u':
-        MAIN.unlink = ~0;
+        MAIN.unlink++;
         break;
 
       /* fall-through */
