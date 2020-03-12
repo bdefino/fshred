@@ -243,7 +243,7 @@ fshred__nftw_callback(const char *opath, const struct stat *st, int info,
 
 		if (ofd < 0) {
 			perrors = (char *) opath;
-			goto bubble_ofd_ok;
+			goto bubble;
 		}
 	}
 
