@@ -103,7 +103,9 @@ static void *(* volatile memshred)(void *, int, size_t) = \
 	(void *(* volatile)(void *, int, size_t)) &memset;
 
 /* shred a file using the contents of another */
-int fshred(const int ofd, const size_t buflen, const int ifd, off_t lim) {
+int
+fshred(const int ofd, const size_t buflen, const int ifd, off_t lim)
+{
 	char buf[buflen];
 	char *bufp;
 	ssize_t cbuflen; /* current buffer length */
@@ -132,14 +134,9 @@ int fshred(const int ofd, const size_t buflen, const int ifd, off_t lim) {
 
 		cbuflen = read(ifd, buf, (buflen < lim ? buflen : lim));
 
-		if (cbuflen < 0) {
-			retval = -errno;
-			goto bubble;
-		} else if (!cbuflen) {
-			/* EOF */
-
-			retval = -EIO;
-			goto bubble;
+		if (cbuflen <= 0) {
+			retval = cbuflen ? -errno : -EIO;
+			goto bubble_ofd_ok;
 		}
 		lim -= cbuflen;
 		
@@ -150,29 +147,27 @@ int fshred(const int ofd, const size_t buflen, const int ifd, off_t lim) {
 
 			if (wbuflen < 0) {
 				retval = -errno;
-				goto bubble;
+				goto bubble_ofd_ok;
 			}
 			bufp += wbuflen;
 			cbuflen -= wbuflen;
 		}
 	}
-
-bubble:
-
-	if (ofd >= 0) {
-		if (fdatasync(ofd)
-				&& !retval) {
-			retval = -errno;
-		}
+bubble_ofd_ok:
+	if (fdatasync(ofd)
+			&& !retval) {
+		retval = -errno;
 	}
+bubble:
 	memshred(buf, '\0', buflen);
 	return retval;
 }
 
 /* handle a callback from `ntfw` */
-static int fshred__nftw_callback(const char *opath, const struct stat *st,
-		int info, struct FTW *walk) {
-	int _errno;
+static int
+fshred__nftw_callback(const char *opath, const struct stat *st, int info,
+	struct FTW *walk)
+{
 	off_t ocount;
 	int ofd;
 	off_t opos;
@@ -224,111 +219,115 @@ static int fshred__nftw_callback(const char *opath, const struct stat *st,
 				goto bubble;
 			}
 		}
-	} else if (info == FTW_F
-			|| info == FTW_SL) {
-		/* attempt to exclusively create the file */
+		goto bubble;
+	}
 
-		ofd = open(opath, O_CREAT | O_EXCL | O_TRUNC | O_WRONLY,
-			S_IRWXU);
+	if (info != FTW_F
+			&& info != FTW_SL) {
+		goto bubble;
+	}
+	
+	/* attempt to exclusively create the file */
+
+	ofd = open(opath, O_CREAT | O_EXCL | O_TRUNC | O_WRONLY, S_IRWXU);
+
+	if (ofd < 0) {
+		if (errno == EEXIST) {
+			/*
+			the file exists,
+			so attempt to open it as usual
+			*/
+
+			ofd = open(opath, O_RDONLY | O_WRONLY);
+		}
 
 		if (ofd < 0) {
-			if (errno == EEXIST) {
-				/*
-				the file exists,
-				so attempt to open it as usual
-				*/
-
-				ofd = open(opath, O_RDONLY | O_WRONLY);
-			}
-
-			if (ofd < 0) {
-				perrors = (char *) opath;
-				goto bubble;
-			}
+			perrors = (char *) opath;
+			goto bubble_ofd_ok;
 		}
+	}
 
-		/* compute output count */
+	/* compute output count */
 
-		ocount = MAIN.ocount;
+	ocount = MAIN.ocount;
 
-		if (!MAIN.has_ocount) {
-			ocount = st->st_size;
+	if (!MAIN.has_ocount) {
+		ocount = st->st_size;
 
-			if (S_ISBLK(st->st_mode)
-					|| S_ISDIR(st->st_mode)) {
-				ocount = lseek(ofd, 0, SEEK_END);
+		if (S_ISBLK(st->st_mode)
+				|| S_ISDIR(st->st_mode)) {
+			ocount = lseek(ofd, 0, SEEK_END);
 
-				if (ocount < 0) {
-					perrors = (char *) opath;
-					retval = -errno;
-					goto bubble;
-				}
-			}
-		}
-
-		/* shred */
-
-		for (round = 0; round < MAIN.rounds; round++) {
-			opos = lseek(ofd, MAIN.ooffset, SEEK_SET);
-
-			if (opos < 0) {
+			if (ocount < 0) {
 				perrors = (char *) opath;
 				retval = -errno;
-				goto bubble;
-			}
-			printf("Shredding \"%s\" (round %u/%u)...\n", opath,
-				round + 1, MAIN.rounds);
-			retval = fshred(ofd, MAIN.buflen, MAIN.ifd,
-				ocount - opos);
-
-			if (retval) {
-				perrors = (char *) opath;
-				goto bubble;
+				goto bubble_ofd_ok;
 			}
 		}
 	}
 
+	/* shred */
+
+	for (round = 0; round < MAIN.rounds; round++) {
+		opos = lseek(ofd, MAIN.ooffset, SEEK_SET);
+
+		if (opos < 0) {
+			perrors = (char *) opath;
+			retval = -errno;
+			goto bubble_ofd_ok;
+		}
+		printf("Shredding \"%s\" (round %u/%u)...\n", opath, round + 1,
+			MAIN.rounds);
+		retval = fshred(ofd, MAIN.buflen, MAIN.ifd, ocount - opos);
+
+		if (retval) {
+			perrors = (char *) opath;
+			goto bubble_ofd_ok;
+		}
+	}
+
+	if (MAIN.unlink
+			&& ((!S_ISBLK(st->st_mode)
+					&& !S_ISCHR(st->st_mode))
+				|| MAIN.unlink > 1)) {
+		/* unlink */
+
+		printf("Unlinking \"%s\"...\n", opath);
+
+		if (unlink(opath)
+				&& !retval) {
+			perrors = (char *) opath;
+			retval = -errno;
+		}
+	}
+bubble_ofd_ok:
+	if (close(ofd)
+			&& !retval) {
+		retval = -errno;
+	}
 bubble:
-
-	_errno = errno;
-
-	if (ofd >= 0) {
-		close(ofd);
-
-		if (MAIN.unlink
-				&& ((!S_ISBLK(st->st_mode)
-						&& !S_ISCHR(st->st_mode))
-					|| MAIN.unlink > 1)) {
-			printf("Unlinking \"%s\"...\n", opath);
-
-			if (unlink(opath)
-					&& !retval) {
-				_errno = errno;
-				perrors = (char *) opath;
-				retval = -errno;
-			}
-		}
-	}
-
 	if (retval < 0) {
-		errno = _errno ? _errno : -retval;
+		errno = -retval;
 		perror(perrors);
 	}
-	errno = _errno;
 	return retval;
 }
 
 /* print the usage */
-static void usage(const char *executable);
+static void
+usage(const char *executable);
 
 /* print the usage and option information */
-static void help(const char *executable) {
+static void
+help(const char *executable)
+{
 	usage(executable != NULL ? executable : "?");
 	fprintf(stderr, OPTIONS);
 }
 
-int main(int argc, char **argv) {
-	int _errno;
+int
+main(int argc, char **argv)
+{
 	int oisdir;
 	int opt;
 	char *perrors;
@@ -422,7 +421,7 @@ int main(int argc, char **argv) {
 	if (lseek(MAIN.ifd, MAIN.ioffset, SEEK_SET) < 0) {
 		perrors = MAIN.ipath;
 		retval = -errno;
-		goto bubble;
+		goto bubble_ifd_ok;
 	}
 
 	for (; optind < argc; optind++) {
@@ -432,7 +431,7 @@ int main(int argc, char **argv) {
 			if (errno != ENOENT) {
 				perrors = MAIN.opath;
 				retval = -errno;
-				goto bubble;
+				goto bubble_ifd_ok;
 			}
 
 			/* signal for a file to be created */
@@ -452,31 +451,26 @@ int main(int argc, char **argv) {
 
 		if (retval) {
 			perrors = MAIN.opath;
-			goto bubble;
+			goto bubble_ifd_ok;
 		}
 	}
-
+bubble_ifd_ok:
+	if (close(MAIN.ifd)
+			&& !retval) {
+		perrors = MAIN.ipath;
+		retval = -errno;
+	}
 bubble:
-
-	_errno = errno;
-
-	if (MAIN.ifd >= 0) {
-		if (close(MAIN.ifd)
-				&& !retval) {
-			_errno = errno;
-			perrors = MAIN.ipath;
-			retval = -errno;
-		}
-	}
-
 	if (retval < 0) {
+		errno = -retval;
 		perror(perrors);
 	}
-	errno = _errno;
 	return retval;
 }
 
-static void usage(const char *executable) {
+static void
+usage(const char *executable)
+{
 	fprintf(stderr, USAGE, executable);
 }
 
